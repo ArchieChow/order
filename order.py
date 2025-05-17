@@ -35,7 +35,8 @@ def create_table():
         物流 TEXT,
         物流费 REAL,
         备注 TEXT,
-        订单状态 TEXT DEFAULT '排图'
+        订单状态 TEXT DEFAULT '排图',
+        跟进备注 TEXT
     )
     """)
     conn.commit()
@@ -44,22 +45,19 @@ def create_table():
 create_table()
 
 # 插入数据
-
 def insert_order(data):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO orders (
             日期, 信保单号, 负责人, 客户名称, 国家, 产品名称, 件数, 汇率,
-            产品总价_美元, 产品总价_元, 计重, 运费_美元, 运费_元,
-            物流, 物流费, 备注
+            产品总价_美元, 产品总价_元, 计重, 运费_美元, 运费_元, 物流, 物流费, 备注
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, data)
     conn.commit()
     conn.close()
 
 # 读取数据
-
 def get_orders(filter_responsible=None, filter_status=None, keyword=None):
     conn = sqlite3.connect(DB_PATH)
     query = "SELECT * FROM orders WHERE 1=1"
@@ -91,13 +89,13 @@ if page == "登记订单":
             客户名称 = st.text_input("客户名称")
         with col2:
             国家 = st.text_input("国家")
-            产品名称 = st.selectbox("产品名称", ["亚克力挂件", "CD挂件", "冰箱贴", "胸牌", "摆件", "手机支架", "登山扣"])
+            产品名称 = st.selectbox("产品名称", [" 亚克力挂件", "CD挂件", " 冰箱贴", " 胸牌", " 摆件", " 手机支架", " 登山扭"])
             件数 = st.number_input("件数", step=1)
             汇率 = st.number_input("汇率", step=0.01, format="%.2f")
         with col3:
-            产品总价_美元 = st.number_input("产品总价（$）", step=0.01)
-            计重 = st.number_input("计重", step=0.01)
-            运费_美元 = st.number_input("运费（$）", step=0.01)
+            产品总价_美元 = st.number_input(" 产品总价（$）", step=0.01)
+            计重 = st.number_input(" 计重", step=0.01)
+            运费_美元 = st.number_input(" 运费（$）", step=0.01)
             物流 = st.selectbox("物流", ["义乌浩远", "杭州洲驰"])
 
         产品总价_元 = round(产品总价_美元 * 汇率, 2)
@@ -109,7 +107,7 @@ if page == "登记订单":
         if submitted:
             insert_order((str(日期), 信保单号, 负责人, 客户名称, 国家, 产品名称, 件数, 汇率,
                           产品总价_美元, 产品总价_元, 计重, 运费_美元, 运费_元, 物流, 物流费, 备注))
-            st.success("订单登记成功！")
+            st.success(" 订单登记成功！")
 
 elif page == "查看与跟进订单":
     st.title("📋 查看与跟进订单")
@@ -117,10 +115,10 @@ elif page == "查看与跟进订单":
     col1, col2, col3 = st.columns(3)
     with col1:
         selected_responsible = st.selectbox("按负责人筛选", ["全部", "Tina", "Archie", "Sarah"])
-        if selected_responsible == "全部":
+        if selected_responsible == " 全部":
             selected_responsible = None
     with col2:
-        selected_status = st.selectbox("按订单状态筛选", ["全部", "已排图", "已生产", "已发货", "已完成"])
+        selected_status = st.selectbox(" 按订单状态筛选", ["全部", "已排图", "已生产", "已发货", "已完成"])
         if selected_status == "全部":
             selected_status = None
     with col3:
@@ -132,19 +130,20 @@ elif page == "查看与跟进订单":
     for idx, row in df.iterrows():
         with st.expander(f"订单号: {row['信保单号']} - 客户: {row['客户名称']}"):
             new_status = st.selectbox(
-                "更新订单状态",
+                " 更新订单状态",
                 ["已排图", "已生产", "已发货", "已完成"],
                 index=["已排图", "已生产", "已发货", "已完成"].index(row["订单状态"]) if row["订单状态"] in ["已排图", "已生产", "已发货", "已完成"] else 0,
                 key=f"status_{row['id']}"
             )
+            followup_note = st.text_area("跟进备注", value=row.get("跟进备注", ""), key=f"note_{row['id']}")
             if st.button("保存修改", key=f"save_{row['id']}"):
                 conn = sqlite3.connect(DB_PATH)
                 cursor = conn.cursor()
-                cursor.execute("UPDATE orders SET 订单状态=? WHERE id=?", (new_status, row['id']))
+                cursor.execute("UPDATE orders SET 订单状态=?, 跟进备注=? WHERE id=?", (new_status, followup_note, row['id']))
                 conn.commit()
                 conn.close()
-                st.success("状态已更新")
-                st.experimental_rerun()
+                st.success(" 状态和备注已更新")
+                st.rerun()
 
 elif page == "快递轨迹查询":
     import requests
